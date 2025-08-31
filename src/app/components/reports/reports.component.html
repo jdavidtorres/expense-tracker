@@ -1,0 +1,238 @@
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+      <i-lucide name="bar-chart-2" class="me-2"></i-lucide>
+      Reports & Analytics
+    </h2>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+          <label for="yearSelect" class="form-label">Year</label>
+          <select
+            id="yearSelect"
+            class="form-select"
+            [(ngModel)]="selectedYear"
+            (change)="onYearChange()">
+            <option *ngFor="let year of [2023, 2024, 2025, 2026]" [value]="year">
+              {{ year }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="monthSelect" class="form-label">Month</label>
+          <select
+            id="monthSelect"
+            class="form-select"
+            [(ngModel)]="selectedMonth"
+            (change)="onMonthChange()">
+            <option *ngFor="let month of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="month">
+              {{ getMonthName(month) }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info" *ngIf="loading">
+    <div class="spinner-border spinner-border-sm me-2" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    Loading report data...
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">
+    <i-lucide name="alert-circle" class="me-2"></i-lucide>
+    {{ error }}
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-4" *ngIf="!loading">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body text-center">
+          <h6 class="card-subtitle mb-2">Monthly Total</h6>
+          <h3>{{ formatCurrency(monthlySummary.total) }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body text-center">
+          <h6 class="card-subtitle mb-2">Yearly Total</h6>
+          <h3>{{ formatCurrency(yearlySummary.total) }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body text-center">
+          <h6 class="card-subtitle mb-2">Monthly Average</h6>
+          <h3>{{ formatCurrency(monthlySummary.monthlyAverage) }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body text-center">
+          <h6 class="card-subtitle mb-2">Categories</h6>
+          <h3>{{ getCategoryKeys(monthlySummary.byCategory).length }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" *ngIf="!loading">
+    <!-- Category Breakdown -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i-lucide name="pie-chart" class="me-2"></i-lucide>
+            {{ getMonthName(selectedMonth) }} {{ selectedYear }} - Category Breakdown
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th class="text-end">Amount</th>
+                  <th class="text-end">% of Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let category of getCategoryKeys(monthlySummary.byCategory)">
+                  <td>{{ category }}</td>
+                  <td class="text-end">{{ formatCurrency(monthlySummary.byCategory[category]) }}</td>
+                  <td class="text-end">
+                    {{ formatPercentage(monthlySummary.byCategory[category], monthlySummary.total) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Categories -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i-lucide name="trending-up" class="me-2"></i-lucide>
+            Top 5 Categories
+          </h5>
+        </div>
+        <div class="card-body">
+          <div *ngFor="let item of getTopCategories(5); let i = index" class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-primary me-2">{{ i + 1 }}</span>
+                  <strong>{{ item.category }}</strong>
+                </div>
+                <div class="progress mt-2" style="height: 8px;">
+                  <div
+                    class="progress-bar bg-primary"
+                    [style.width.%]="(item.amount / getTopCategories(1)[0]?.amount || 1) * 100">
+                  </div>
+                </div>
+              </div>
+              <div class="text-end ms-3">
+                <div class="fw-bold">{{ formatCurrency(item.amount) }}</div>
+                <small class="text-muted">
+                  {{ formatPercentage(item.amount, monthlySummary.total) }}
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yearly Overview -->
+  <div class="row mt-4" *ngIf="!loading">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i-lucide name="calendar-days" class="me-2"></i-lucide>
+            {{ selectedYear }} Yearly Overview
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Yearly Expenses by Category</h6>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th class="text-end">Amount</th>
+                      <th class="text-end">% of Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let category of getCategoryKeys(yearlySummary.byCategory)">
+                      <td>{{ category }}</td>
+                      <td class="text-end">{{ formatCurrency(yearlySummary.byCategory[category]) }}</td>
+                      <td class="text-end">
+                        {{ formatPercentage(yearlySummary.byCategory[category], yearlySummary.total) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6>Key Metrics</h6>
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h6 class="card-subtitle mb-1 text-muted small">Total Spent</h6>
+                      <h4 class="text-success mb-0">{{ formatCurrency(yearlySummary.total) }}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h6 class="card-subtitle mb-1 text-muted small">Monthly Avg</h6>
+                      <h4 class="text-info mb-0">{{ formatCurrency(yearlySummary.monthlyAverage) }}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h6 class="card-subtitle mb-1 text-muted small">Highest Month</h6>
+                      <h4 class="text-warning mb-0">{{ formatCurrency(yearlySummary.total / 12 * 1.2) }}</h4>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h6 class="card-subtitle mb-1 text-muted small">Categories</h6>
+                      <h4 class="text-primary mb-0">{{ getCategoryKeys(yearlySummary.byCategory).length }}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

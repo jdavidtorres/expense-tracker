@@ -1,0 +1,45 @@
+<div class="app-container">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" routerLink="/">
+        <i-lucide name="wallet" class="me-2"></i-lucide>
+        Expense Tracker
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+              <i-lucide name="home" class="me-1"></i-lucide>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/subscriptions" routerLinkActive="active">
+              <i-lucide name="repeat-2" class="me-1"></i-lucide>
+              Subscriptions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/invoices" routerLinkActive="active">
+              <i-lucide name="file-text" class="me-1"></i-lucide>
+              Invoices
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/reports" routerLinkActive="active">
+              <i-lucide name="bar-chart-2" class="me-1"></i-lucide>
+              Reports
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid mt-4">
+    <router-outlet></router-outlet>
+  </div>
+</div>

@@ -1,12 +1,4 @@
-/.angular
-/.github
-/.windsurf
-/README.md
-/angular.json
 /dist
 /node_modules
-/package-lock.json
-/package.json
-/src
-/tsconfig.app.json
-/tsconfig.json
+.angular/
+.github/chatmodes/

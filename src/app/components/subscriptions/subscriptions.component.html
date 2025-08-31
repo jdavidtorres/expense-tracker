@@ -1,0 +1,200 @@
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+      <i-lucide name="repeat-2" class="me-2"></i-lucide>
+      Subscriptions
+    </h2>
+    <button class="btn btn-primary" (click)="openAddSubscription()">
+      <i-lucide name="plus" class="me-1"></i-lucide>
+      Add Subscription
+    </button>
+  </div>
+
+  <!-- Subscription Form -->
+  <app-subscription-form
+    [isVisible]="showForm"
+    [subscription]="editingSubscription"
+    (saved)="onFormSaved()"
+    (cancelled)="onFormCancelled()">
+  </app-subscription-form>
+
+  <div class="card mb-4" *ngIf="!showForm">
+    <div class="card-header bg-light">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i-lucide name="search"></i-lucide>
+            </span>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search subscriptions..."
+              [(ngModel)]="searchTerm"
+              (input)="applyFilters()">
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <select
+            class="form-select"
+            [(ngModel)]="selectedCategory"
+            (change)="applyFilters()">
+            <option value="all">All Categories</option>
+            <option *ngFor="let category of categories" [value]="category">
+              {{ category }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-5">
+          <div class="d-flex align-items-center">
+            <div class="form-check form-switch me-4">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="showActive"
+                [(ngModel)]="showActive"
+                (change)="applyFilters()">
+              <label class="form-check-label" for="showActive">
+                Active
+              </label>
+            </div>
+
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="showInactive"
+                [(ngModel)]="showInactive"
+                (change)="applyFilters()">
+              <label class="form-check-label" for="showInactive">
+                Inactive
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th class="text-end">Amount</th>
+              <th>Billing</th>
+              <th>Next Payment</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="loading">
+              <td colspan="7" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="!loading && filteredSubscriptions.length === 0">
+              <td colspan="7" class="text-center py-4">
+                No subscriptions found. Add your first subscription to get started.
+              </td>
+            </tr>
+
+            <tr *ngFor="let sub of filteredSubscriptions">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="flex-shrink-0 me-2">
+                    <div class="avatar-sm bg-soft-primary rounded">
+                      <div class="text-primary fs-16 fw-medium">
+                        {{ sub.name.charAt(0).toUpperCase() }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0">{{ sub.name }}</h6>
+                    <small class="text-muted">{{ sub.frequency | titlecase }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-soft-primary text-primary">
+                  {{ sub.category }}
+                </span>
+              </td>
+              <td class="text-end fw-semibold">
+                {{ formatCurrency(sub.amount) }}
+                <small class="text-muted d-block">per {{ sub.billingCycle }}</small>
+              </td>
+              <td>
+                <span class="badge bg-soft-info text-info">
+                  {{ sub.billingCycle | titlecase }}
+                </span>
+              </td>
+              <td>
+                {{ formatDate(sub.paymentDate) }}
+                <small class="text-muted d-block">
+                  {{ getDaysUntilPayment(sub.paymentDate) }}
+                </small>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(sub.isActive)">
+                  {{ sub.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="btn-group" role="group">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    (click)="openEditSubscription(sub)">
+                    <i-lucide name="edit-2" size="16"></i-lucide>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="deleteSubscription(sub.id!)">
+                    <i-lucide name="trash-2" size="16"></i-lucide>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [ngClass]="sub.isActive ? 'btn-outline-warning' : 'btn-outline-success'"
+                    (click)="toggleSubscriptionStatus(sub)">
+                    <i-lucide
+                      [name]="sub.isActive ? 'pause' : 'play'"
+                      size="16">
+                    </i-lucide>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-footer bg-light">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-0">
+            Showing <strong>{{ filteredSubscriptions.length }}</strong> of <strong>{{ subscriptions.length }}</strong> subscriptions
+          </p>
+        </div>
+        <div class="col-md-6">
+          <p class="text-md-end mb-0">
+            <span class="fw-semibold">Monthly Total:</span>
+            <span class="ms-2 text-primary fw-bold">
+              {{ getMonthlyTotal() | currency }}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
