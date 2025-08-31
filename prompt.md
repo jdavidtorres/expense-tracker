@@ -1,0 +1,3 @@
+# Expense Tracker App - Main Prompt
+
+I want to plan my expenses so I need an app to register subscriptions and invoices. Just those kinds of expenses. I need to calculate monthly and yearly balances. Use Angular 20, CSS, Bootstrap, and Lucide icons. Create a service class to connect with localhost:8083 (backend URL). Run npm commands to check build and run, and npm update to check the latest versions. Also, use separate files for HTML, TS, and CSS. As I want a standard design style, use a general CSS file instead of specific CSS files for each component. Don't use ngModule files because now Angular applications are standalone.
