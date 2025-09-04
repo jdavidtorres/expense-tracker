@@ -1,0 +1,110 @@
+@page "/reports"
+@inject ExpenseService ExpenseService
+@rendermode InteractiveServer
+
+<Microsoft.AspNetCore.Components.Web.PageTitle>Reports - Expense Tracker</Microsoft.AspNetCore.Components.Web.PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2 mb-4">Financial Reports</h1>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Monthly Spending Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" width="400" height="200"></canvas>
+                    <p class="text-center text-muted mt-3">
+                        <i data-lucide="bar-chart-3" class="me-2"></i>
+                        Chart visualization coming soon
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Category Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" width="400" height="200"></canvas>
+                    <p class="text-center text-muted mt-3">
+                        <i data-lucide="pie-chart" class="me-2"></i>
+                        Chart visualization coming soon
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Expense Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <h4 class="text-primary">$@totalMonthly.ToString("F2")</h4>
+                                <p class="text-muted mb-0">Monthly Total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <h4 class="text-success">$@totalQuarterly.ToString("F2")</h4>
+                                <p class="text-muted mb-0">Quarterly Total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <h4 class="text-warning">$@totalYearly.ToString("F2")</h4>
+                                <p class="text-muted mb-0">Yearly Total</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <h4 class="text-info">$@averageMonthly.ToString("F2")</h4>
+                                <p class="text-muted mb-0">Average Monthly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private decimal totalMonthly = 0;
+    private decimal totalQuarterly = 0;
+    private decimal totalYearly = 0;
+    private decimal averageMonthly = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var subscriptions = await ExpenseService.GetSubscriptionsAsync();
+
+            totalMonthly = subscriptions.Where(s => s.BillingCycle == BillingCycle.Monthly).Sum(s => s.Amount);
+            totalQuarterly = subscriptions.Where(s => s.BillingCycle == BillingCycle.Quarterly).Sum(s => s.Amount);
+            totalYearly = subscriptions.Where(s => s.BillingCycle == BillingCycle.Yearly).Sum(s => s.Amount);
+
+            // Calculate average monthly (convert all to monthly equivalent)
+            var monthlyEquivalent = totalMonthly + (totalQuarterly / 3) + (totalYearly / 12);
+            averageMonthly = monthlyEquivalent;
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine($"Error loading reports data: {ex.Message}");
+        }
+    }
+}

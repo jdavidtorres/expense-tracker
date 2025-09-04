@@ -1,0 +1,144 @@
+@page "/"
+@using ExpenseTracker.Shared.Models
+@using ExpenseTracker.Shared.Services
+@inject ExpenseService ExpenseService
+@rendermode InteractiveServer
+
+<PageTitle>Dashboard - Expense Tracker</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2 mb-4">Dashboard</h1>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Total Subscriptions</h5>
+                            <h3 class="card-text">@totalSubscriptions</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-lucide="repeat" style="width: 48px; height: 48px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Monthly Spend</h5>
+                            <h3 class="card-text">$@monthlyTotal.ToString("F2")</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-lucide="dollar-sign" style="width: 48px; height: 48px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Upcoming Payments</h5>
+                            <h3 class="card-text">@upcomingPayments</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-lucide="calendar-clock" style="width: 48px; height: 48px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Subscriptions</h5>
+                </div>
+                <div class="card-body">
+                    @if (recentSubscriptions?.Any() == true)
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var subscription in recentSubscriptions)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">@subscription.Name</h6>
+                                        <small class="text-muted">@subscription.BillingCycle.ToString()</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">$@subscription.Amount.ToString("F2")</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No subscriptions found. <a href="/subscriptions">Add your first subscription</a></p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Spending Overview</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="spendingChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int totalSubscriptions = 0;
+    private decimal monthlyTotal = 0;
+    private int upcomingPayments = 0;
+    private List<Subscription>? recentSubscriptions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var subscriptions = await ExpenseService.GetSubscriptionsAsync();
+            totalSubscriptions = subscriptions.Count;
+            monthlyTotal = subscriptions.Where(s => s.BillingCycle == BillingCycle.Monthly).Sum(s => s.Amount);
+
+            // Calculate upcoming payments (next 7 days)
+            var today = DateTime.Today;
+            var nextWeek = today.AddDays(7);
+            upcomingPayments = subscriptions.Count(s =>
+                s.NextBillingDate >= today && s.NextBillingDate <= nextWeek);
+
+            recentSubscriptions = subscriptions.OrderByDescending(s => s.StartDate).Take(5).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Handle error - in production, log this
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize Lucide icons
+            await Task.Delay(100); // Small delay to ensure DOM is ready
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

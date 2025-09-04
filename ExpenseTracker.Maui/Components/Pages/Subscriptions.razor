@@ -1,0 +1,421 @@
+@page "/subscriptions"
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Subscriptions - Expense Tracker</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i data-lucide="refresh-cw" class="me-2"></i>
+                    Subscriptions
+                </h2>
+                <button class="btn btn-primary" @onclick="OpenAddSubscription">
+                    <i data-lucide="plus" class="me-1"></i>
+                    Add Subscription
+                </button>
+            </div>
+
+            @if (loading)
+            {
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Loading subscriptions...
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger">
+                    <i data-lucide="alert-circle" class="me-2"></i>
+                    @error
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!showForm && !loading)
+    {
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Search</label>
+                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchChanged"
+                                       placeholder="Search subscriptions..." />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" @bind="selectedCategory" @onchange="ApplyFilters">
+                                    <option value="all">All Categories</option>
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="showActive" @onchange="ApplyFilters" />
+                                    <label class="form-check-label">Active</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="showInactive" @onchange="ApplyFilters" />
+                                    <label class="form-check-label">Inactive</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Summary</label>
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <small class="text-muted">Monthly Total</small>
+                                        <div class="h5 text-primary">@FormatCurrency(GetMonthlyTotal())</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscriptions List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        @if (filteredSubscriptions.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Billing Cycle</th>
+                                            <th>Next Payment</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var subscription in filteredSubscriptions)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@subscription.Name</strong>
+                                                    @if (!string.IsNullOrEmpty(subscription.Notes))
+                                                    {
+                                                        <br><small class="text-muted">@subscription.Notes</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary">@subscription.Category</span>
+                                                </td>
+                                                <td>@FormatCurrency(subscription.Amount)</td>
+                                                <td>@subscription.BillingCycle</td>
+                                                <td>
+                                                    @FormatDate(subscription.PaymentDate)
+                                                    <br><small class="@GetDaysUntilPaymentClass(subscription.PaymentDate)">
+                                                        @GetDaysUntilPayment(subscription.PaymentDate)
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge @GetStatusBadgeClass(subscription.IsActive)">
+                                                        @(subscription.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button class="btn btn-outline-primary" @onclick="() => OpenEditSubscription(subscription)">
+                                                            <i data-lucide="edit-2"></i>
+                                                        </button>
+                                                        <button class="btn @(subscription.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                                                @onclick="() => ToggleSubscriptionStatus(subscription)">
+                                                            <i data-lucide="@(subscription.IsActive ? "pause" : "play")"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" @onclick="() => DeleteSubscription(subscription.Id)">
+                                                            <i data-lucide="trash-2"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i data-lucide="inbox" class="text-muted" style="width: 64px; height: 64px;"></i>
+                                <h5 class="text-muted mt-3">No subscriptions found</h5>
+                                <p class="text-muted">Start by adding your first subscription.</p>
+                                <button class="btn btn-primary" @onclick="OpenAddSubscription">
+                                    <i data-lucide="plus" class="me-1"></i>
+                                    Add Subscription
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showForm)
+    {
+        <SubscriptionForm
+            Subscription="editingSubscription"
+            OnSave="OnFormSaved"
+            OnCancel="OnFormCancelled" />
+    }
+</div>
+
+@code {
+    private List<Subscription> subscriptions = new();
+    private List<Subscription> filteredSubscriptions = new();
+    private List<string> categories = new();
+
+    private bool loading = true;
+    private string? error;
+    private string searchTerm = string.Empty;
+    private string selectedCategory = "all";
+    private bool showActive = true;
+    private bool showInactive = false;
+
+    private bool showForm = false;
+    private Subscription? editingSubscription;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubscriptions();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+    }
+
+    private async Task LoadSubscriptions()
+    {
+        try
+        {
+            loading = true;
+            error = null;
+
+            subscriptions = await ExpenseService.GetSubscriptionsAsync();
+            filteredSubscriptions = new List<Subscription>(subscriptions);
+            ExtractCategories();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            error = "Failed to load subscriptions";
+            Console.WriteLine($"Error loading subscriptions: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ExtractCategories()
+    {
+        var categorySet = new HashSet<string>();
+        foreach (var subscription in subscriptions)
+        {
+            if (!string.IsNullOrEmpty(subscription.Category))
+            {
+                categorySet.Add(subscription.Category);
+            }
+        }
+        categories = categorySet.OrderBy(c => c).ToList();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredSubscriptions = subscriptions.Where(sub =>
+        {
+            // Filter by active/inactive
+            if (sub.IsActive && !showActive) return false;
+            if (!sub.IsActive && !showInactive) return false;
+
+            // Filter by category
+            if (selectedCategory != "all" && sub.Category != selectedCategory) return false;
+
+            // Filter by search term
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                return sub.Name.ToLower().Contains(searchLower) ||
+                       (sub.Notes?.ToLower().Contains(searchLower) == true);
+            }
+
+            return true;
+        }).ToList();
+
+        StateHasChanged();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+        await Task.CompletedTask;
+    }
+
+    private void OpenAddSubscription()
+    {
+        editingSubscription = null;
+        showForm = true;
+    }
+
+    private void OpenEditSubscription(Subscription subscription)
+    {
+        editingSubscription = subscription;
+        showForm = true;
+    }
+
+    private async Task OnFormSaved()
+    {
+        showForm = false;
+        editingSubscription = null;
+        await LoadSubscriptions();
+    }
+
+    private void OnFormCancelled()
+    {
+        showForm = false;
+        editingSubscription = null;
+    }
+
+    private async Task DeleteSubscription(string id)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("expenseTracker.confirm",
+            "Are you sure you want to delete this subscription? This action cannot be undone.");
+
+        if (confirmed)
+        {
+            try
+            {
+                var success = await ExpenseService.DeleteSubscriptionAsync(id);
+                if (success)
+                {
+                    await LoadSubscriptions();
+                }
+                else
+                {
+                    error = "Failed to delete subscription";
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "Failed to delete subscription";
+                Console.WriteLine($"Error deleting subscription: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ToggleSubscriptionStatus(Subscription subscription)
+    {
+        try
+        {
+            var updated = new Subscription
+            {
+                Id = subscription.Id,
+                Name = subscription.Name,
+                Amount = subscription.Amount,
+                Category = subscription.Category,
+                PaymentDate = subscription.PaymentDate,
+                DueDate = subscription.DueDate,
+                IsRecurring = subscription.IsRecurring,
+                Frequency = subscription.Frequency,
+                Notes = subscription.Notes,
+                CreatedAt = subscription.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                BillingCycle = subscription.BillingCycle,
+                StartDate = subscription.StartDate,
+                EndDate = subscription.EndDate,
+                IsActive = !subscription.IsActive
+            };
+
+            var result = await ExpenseService.UpdateSubscriptionAsync(updated);
+            if (result != null)
+            {
+                await LoadSubscriptions();
+            }
+            else
+            {
+                error = "Failed to update subscription status";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = "Failed to update subscription status";
+            Console.WriteLine($"Error updating subscription status: {ex.Message}");
+        }
+    }
+
+    private string GetStatusBadgeClass(bool isActive)
+    {
+        return isActive ? "bg-success" : "bg-secondary";
+    }
+
+    private string GetDaysUntilPayment(DateTime paymentDate)
+    {
+        var today = DateTime.Today;
+        var nextPayment = paymentDate.Date;
+        var diffDays = (int)(nextPayment - today).TotalDays;
+
+        return diffDays switch
+        {
+            0 => "Due today",
+            > 0 => $"{diffDays} day{(diffDays == 1 ? "" : "s")} left",
+            _ => $"{Math.Abs(diffDays)} day{(Math.Abs(diffDays) == 1 ? "" : "s")} overdue"
+        };
+    }
+
+    private string GetDaysUntilPaymentClass(DateTime paymentDate)
+    {
+        var today = DateTime.Today;
+        var diffDays = (int)(paymentDate.Date - today).TotalDays;
+
+        return diffDays switch
+        {
+            var d when d < 0 => "text-danger",
+            0 => "text-warning",
+            var d when d <= 7 => "text-warning",
+            _ => "text-success"
+        };
+    }
+
+    private decimal GetMonthlyTotal()
+    {
+        return filteredSubscriptions
+            .Where(s => s.IsActive)
+            .Sum(s => s.BillingCycle == BillingCycle.Yearly ? s.Amount / 12 : s.Amount);
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        return date.ToString("MMM dd, yyyy");
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        return amount.ToString("C2");
+    }
+}

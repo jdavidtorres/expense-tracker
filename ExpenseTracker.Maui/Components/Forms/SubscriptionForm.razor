@@ -1,0 +1,255 @@
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i data-lucide="@(IsEditing ? "edit-2" : "plus")" class="me-2"></i>
+            @(IsEditing ? "Edit Subscription" : "Add New Subscription")
+        </h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger">
+                    <i data-lucide="alert-circle" class="me-2"></i>
+                    @error
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Name *</label>
+                        <InputText @bind-Value="model.Name" class="form-control" placeholder="Subscription name" />
+                        <ValidationMessage For="() => model.Name" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Category *</label>
+                        <InputText @bind-Value="model.Category" class="form-control" placeholder="e.g., Entertainment, Software" />
+                        <ValidationMessage For="() => model.Category" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Amount *</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <InputNumber @bind-Value="model.Amount" class="form-control" placeholder="0.00" />
+                        </div>
+                        <ValidationMessage For="() => model.Amount" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Billing Cycle *</label>
+                        <InputSelect @bind-Value="model.BillingCycle" class="form-select">
+                            <option value="@BillingCycle.Monthly">Monthly</option>
+                            <option value="@BillingCycle.Yearly">Yearly</option>
+                        </InputSelect>
+                        <ValidationMessage For="() => model.BillingCycle" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="form-check form-switch">
+                            <InputCheckbox @bind-Value="model.IsActive" class="form-check-input" />
+                            <label class="form-check-label">
+                                @(model.IsActive ? "Active" : "Inactive")
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Payment Date *</label>
+                        <InputDate @bind-Value="model.PaymentDate" class="form-control" />
+                        <ValidationMessage For="() => model.PaymentDate" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Start Date *</label>
+                        <InputDate @bind-Value="model.StartDate" class="form-control" />
+                        <ValidationMessage For="() => model.StartDate" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Due Date</label>
+                        <InputDate @bind-Value="model.DueDate" class="form-control" />
+                        <ValidationMessage For="() => model.DueDate" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">End Date</label>
+                        <InputDate @bind-Value="model.EndDate" class="form-control" />
+                        <ValidationMessage For="() => model.EndDate" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="model.IsRecurring" class="form-check-input" />
+                    <label class="form-check-label">
+                        Recurring expense
+                    </label>
+                </div>
+            </div>
+
+            @if (model.IsRecurring)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Frequency</label>
+                    <InputSelect @bind-Value="model.Frequency" class="form-select">
+                        <option value="">Select frequency</option>
+                        <option value="@ExpenseFrequency.Daily">Daily</option>
+                        <option value="@ExpenseFrequency.Weekly">Weekly</option>
+                        <option value="@ExpenseFrequency.Monthly">Monthly</option>
+                        <option value="@ExpenseFrequency.Yearly">Yearly</option>
+                    </InputSelect>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <InputTextArea @bind-Value="model.Notes" class="form-control" rows="3" placeholder="Optional notes about this subscription" />
+                <ValidationMessage For="() => model.Notes" />
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" @onclick="Cancel" disabled="@submitting">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" disabled="@submitting">
+                    @if (submitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    @(IsEditing ? "Update" : "Create") Subscription
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Subscription? Subscription { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Subscription model = new();
+    private bool submitting = false;
+    private string? error;
+
+    private bool IsEditing => Subscription != null;
+
+    protected override void OnParametersSet()
+    {
+        if (Subscription != null)
+        {
+            // Edit mode - copy values from existing subscription
+            model = new Subscription
+            {
+                Id = Subscription.Id,
+                Name = Subscription.Name,
+                Amount = Subscription.Amount,
+                Category = Subscription.Category,
+                PaymentDate = Subscription.PaymentDate,
+                DueDate = Subscription.DueDate,
+                IsRecurring = Subscription.IsRecurring,
+                Frequency = Subscription.Frequency,
+                Notes = Subscription.Notes,
+                BillingCycle = Subscription.BillingCycle,
+                StartDate = Subscription.StartDate,
+                EndDate = Subscription.EndDate,
+                IsActive = Subscription.IsActive,
+                CreatedAt = Subscription.CreatedAt,
+                UpdatedAt = Subscription.UpdatedAt
+            };
+        }
+        else
+        {
+            // Add mode - initialize with defaults
+            model = new Subscription
+            {
+                Id = Guid.NewGuid().ToString(),
+                PaymentDate = DateTime.Today,
+                StartDate = DateTime.Today,
+                BillingCycle = BillingCycle.Monthly,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            submitting = true;
+            error = null;
+
+            model.UpdatedAt = DateTime.UtcNow;
+
+            Subscription? result;
+            if (IsEditing)
+            {
+                result = await ExpenseService.UpdateSubscriptionAsync(model);
+            }
+            else
+            {
+                result = await ExpenseService.CreateSubscriptionAsync(model);
+            }
+
+            if (result != null)
+            {
+                await OnSave.InvokeAsync();
+            }
+            else
+            {
+                error = $"Failed to {(IsEditing ? "update" : "create")} subscription";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Error {(IsEditing ? "updating" : "creating")} subscription: {ex.Message}";
+            Console.WriteLine($"Error in HandleValidSubmit: {ex}");
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

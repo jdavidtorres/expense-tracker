@@ -1,0 +1,308 @@
+@page "/subscriptions"
+@inject ExpenseService ExpenseService
+@rendermode InteractiveServer
+
+<Microsoft.AspNetCore.Components.Web.PageTitle>Subscriptions - Expense Tracker</Microsoft.AspNetCore.Components.Web.PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Subscriptions</h1>
+                <button class="btn btn-primary" @onclick="ShowAddForm">
+                    <i data-lucide="plus" class="me-2"></i>
+                    Add Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (showForm)
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            @(editingSubscription != null ? "Edit Subscription" : "Add New Subscription")
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <SubscriptionForm
+                            Subscription="@currentSubscription"
+                            OnSave="@HandleSave"
+                            OnCancel="@HandleCancel" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i data-lucide="search"></i>
+                </span>
+                <input type="text" class="form-control" placeholder="Search subscriptions..."
+                       @bind="searchTerm" @oninput="OnSearchInput" />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="filterCategory">
+                <option value="">All Categories</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Productivity">Productivity</option>
+                <option value="Health">Health</option>
+                <option value="Education">Education</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="sortBy">
+                <option value="name">Sort by Name</option>
+                <option value="amount">Sort by Amount</option>
+                <option value="nextBilling">Sort by Next Billing</option>
+                <option value="category">Sort by Category</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (filteredSubscriptions?.Any() == true)
+            {
+                <div class="row">
+                    @foreach (var subscription in filteredSubscriptions)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title">@subscription.Name</h5>
+                                        <span class="badge bg-secondary">@subscription.Category</span>
+                                    </div>
+                                    <h4 class="text-primary mb-2">$@subscription.Amount.ToString("F2")</h4>
+                                    <p class="card-text text-muted mb-2">@subscription.BillingCycle.ToString()</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            Next billing: @subscription.NextBillingDate.ToString("MMM dd, yyyy")
+                                            <span class="@GetDaysUntilPaymentClass(subscription.NextBillingDate)">
+                                                (@GetDaysUntilPayment(subscription.NextBillingDate))
+                                            </span>
+                                        </small>
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(subscription.Description))
+                                    {
+                                        <p class="card-text">@subscription.Description</p>
+                                    }
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <button class="btn btn-outline-primary" @onclick="() => EditSubscription(subscription)">
+                                            <i data-lucide="edit" class="me-1"></i>
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => DeleteSubscription(subscription.Id)">
+                                            <i data-lucide="trash-2" class="me-1"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center">
+                    <div class="card">
+                        <div class="card-body">
+                            <i data-lucide="plus-circle" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+                            <h5 class="card-title">No subscriptions found</h5>
+                            <p class="card-text text-muted">Start tracking your recurring expenses by adding your first subscription.</p>
+                            <button class="btn btn-primary" @onclick="ShowAddForm">
+                                <i data-lucide="plus" class="me-2"></i>
+                                Add Your First Subscription
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Subscription> subscriptions = new();
+    private List<Subscription> filteredSubscriptions = new();
+    private bool isLoading = true;
+    private bool showForm = false;
+    private Subscription? editingSubscription;
+    private Subscription currentSubscription = new();
+
+    private string searchTerm = "";
+    private string filterCategory = "";
+    private string sortBy = "name";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubscriptions();
+    }
+
+    private async Task LoadSubscriptions()
+    {
+        try
+        {
+            isLoading = true;
+            subscriptions = await ExpenseService.GetSubscriptionsAsync();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine($"Error loading subscriptions: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var filtered = subscriptions.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(s =>
+                s.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                s.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply category filter
+        if (!string.IsNullOrWhiteSpace(filterCategory))
+        {
+            filtered = filtered.Where(s => s.Category == filterCategory);
+        }
+
+        // Apply sorting
+        filtered = sortBy switch
+        {
+            "amount" => filtered.OrderByDescending(s => s.Amount),
+            "nextBilling" => filtered.OrderBy(s => s.NextBillingDate),
+            "category" => filtered.OrderBy(s => s.Category).ThenBy(s => s.Name),
+            _ => filtered.OrderBy(s => s.Name)
+        };
+
+        filteredSubscriptions = filtered.ToList();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ShowAddForm()
+    {
+        editingSubscription = null;
+        currentSubscription = new Subscription();
+        showForm = true;
+    }
+
+    private void EditSubscription(Subscription subscription)
+    {
+        editingSubscription = subscription;
+        currentSubscription = new Subscription
+        {
+            Id = subscription.Id,
+            Name = subscription.Name,
+            Amount = subscription.Amount,
+            Description = subscription.Description,
+            Category = subscription.Category,
+            BillingCycle = subscription.BillingCycle,
+            StartDate = subscription.StartDate,
+            NextBillingDate = subscription.NextBillingDate
+        };
+        showForm = true;
+    }
+
+    private async Task HandleSave(Subscription subscription)
+    {
+        try
+        {
+            if (editingSubscription != null)
+            {
+                await ExpenseService.UpdateSubscriptionAsync(subscription);
+            }
+            else
+            {
+                await ExpenseService.CreateSubscriptionAsync(subscription);
+            }
+
+            await LoadSubscriptions();
+            showForm = false;
+            editingSubscription = null;
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine($"Error saving subscription: {ex.Message}");
+        }
+    }
+
+    private void HandleCancel()
+    {
+        showForm = false;
+        editingSubscription = null;
+    }
+
+    private async Task DeleteSubscription(string id)
+    {
+        try
+        {
+            await ExpenseService.DeleteSubscriptionAsync(id);
+            await LoadSubscriptions();
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine($"Error deleting subscription: {ex.Message}");
+        }
+    }
+
+    private string GetDaysUntilPayment(DateTime nextBillingDate)
+    {
+        var days = (nextBillingDate - DateTime.Today).Days;
+        return days switch
+        {
+            var d when d < 0 => $"{Math.Abs(days)} days overdue",
+            0 => "Due today",
+            1 => "Due tomorrow",
+            _ => $"in {days} days"
+        };
+    }
+
+    private string GetDaysUntilPaymentClass(DateTime nextBillingDate)
+    {
+        var days = (nextBillingDate - DateTime.Today).Days;
+        return days switch
+        {
+            var d when d < 0 => "text-danger",
+            var d when d <= 3 => "text-warning",
+            _ => "text-success"
+        };
+    }
+}
+}

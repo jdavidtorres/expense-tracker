@@ -1,197 +1,387 @@
 # Expense Tracker - AI Coding Guidelines
 
 ## Architecture Overview
-Angular 20 standalone application for tracking subscriptions and invoices.
+Cross-platform .NET MAUI Blazor Hybrid application for tracking subscriptions and invoices, with additional Blazor Web support.
 
 **Key Components:**
-- `ExpenseService` - Central service for API communication to `localhost:8083`
-- Standalone components with explicit imports
+- `ExpenseService` - Central service for API communication to `localhost:8083` using HttpClient
+- Blazor components with shared logic across platforms
 - Data models: `Expense`, `Subscription`, `Invoice` with inheritance
 - Dashboard with expense summaries and category breakdowns
+- Native platform integration through .NET MAUI
 
 ## Core Patterns
 
-### Component Structure
-```typescript
-@Component({
-  selector: 'app-example',
-  standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
-  templateUrl: './example.component.html'
-})
+### Blazor Component Structure
+```csharp
+@page "/subscriptions"
+@using ExpenseTracker.Models
+@using ExpenseTracker.Services
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Subscriptions</PageTitle>
+
+<div class="container-fluid">
+    <h2>Subscriptions</h2>
+    <!-- Component content -->
+</div>
+
+@code {
+    private List<Subscription> subscriptions = new();
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubscriptions();
+    }
+
+    private async Task LoadSubscriptions()
+    {
+        try
+        {
+            loading = true;
+            subscriptions = await ExpenseService.GetSubscriptionsAsync();
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to load subscriptions: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}
 ```
 
-### Control Flow Syntax (Angular 17+)
-Use new control flow syntax instead of structural directives:
+### Service Registration (MauiProgram.cs)
+```csharp
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            });
 
-```html
-@if (loading) {
-  <div class="alert alert-info">Loading...</div>
-} @else if (error) {
-  <div class="alert alert-danger">{{ error }}</div>
-}
+        builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddHttpClient<ExpenseService>(client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:8083/api/");
+        });
 
-@for (category of categories; track category) {
-  <tr><td>{{ category }}</td></tr>
-} @empty {
-  <tr><td>No data found</td></tr>
+#if DEBUG
+        builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Logging.AddDebug();
+#endif
+
+        return builder.Build();
+    }
 }
 ```
 
-### Service API Calls
-```typescript
-this.http.get<Subscription[]>(`${API_BASE_URL}/subscriptions`)
-  .pipe(catchError(this.handleError<Subscription[]>('getSubscriptions', [])))
+### HttpClient Service Pattern
+```csharp
+public class ExpenseService
+{
+    private readonly HttpClient _httpClient;
+    private readonly JsonSerializerOptions _jsonOptions;
+
+    public ExpenseService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+        _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+    }
+
+    public async Task<List<Subscription>> GetSubscriptionsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("subscriptions");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<List<Subscription>>(json, _jsonOptions) ?? new();
+        }
+        catch (Exception ex)
+        {
+            // Log error
+            return new List<Subscription>();
+        }
+    }
+}
 ```
 
 ### Error Handling
-```typescript
-private handleError<T>(operation = 'operation', result?: T): Observable<T> {
-  return (error: any): Observable<T> => {
-    console.error(`${operation} failed:`, error);
-    return of(result as T);
-  };
+```csharp
+private async Task<T?> HandleApiCall<T>(Func<Task<T>> apiCall, string operation)
+{
+    try
+    {
+        return await apiCall();
+    }
+    catch (HttpRequestException ex)
+    {
+        Logger.LogError(ex, "HTTP error in {Operation}", operation);
+        throw new ApplicationException($"Network error in {operation}");
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Unexpected error in {Operation}", operation);
+        throw;
+    }
 }
 ```
 
-### Formatting Utilities
-```typescript
-formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: 'USD', minimumFractionDigits: 2
-  }).format(amount);
-}
-
-formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
-  });
-}
+### Platform-Specific Code
+```csharp
+#if ANDROID
+    // Android-specific implementation
+#elif IOS
+    // iOS-specific implementation
+#elif WINDOWS
+    // Windows-specific implementation
+#elif MACCATALYST
+    // macOS-specific implementation
+#endif
 ```
 
 ## Best Practices & Standards
 
-### TypeScript Standards
-- Use strict mode and strong typing
-- Avoid `any` type - use interfaces and union types
-- Use optional chaining (`?.`) and nullish coalescing (`??`)
+### C# and .NET Standards
+- Use nullable reference types and null-conditional operators
+- Implement proper async/await patterns
+- Use record types for immutable data models
+- Follow SOLID principles and dependency injection
 
-### Angular Best Practices
-- Use standalone components and new control flow syntax
-- Implement `OnPush` change detection for performance
-- Always unsubscribe observables in `ngOnDestroy`
-- Use signals for reactive state management
+### Blazor Best Practices
+- Use @code blocks for component logic
+- Implement IDisposable for cleanup when needed
+- Use StateHasChanged() sparingly and only when necessary
+- Prefer one-way data binding with event callbacks
 
-```typescript
-// Proper cleanup
-private destroy$ = new Subject<void>();
-ngOnDestroy(): void {
-  this.destroy$.next();
-  this.destroy$.complete();
+```csharp
+// Proper component lifecycle
+public void Dispose()
+{
+    // Clean up resources, cancel tokens, etc.
 }
 
-// Signals for state
-private readonly loading = signal(false);
-private readonly error = signal<string | null>(null);
+// Event handling pattern
+[Parameter] public EventCallback<Subscription> OnSubscriptionChanged { get; set; }
+
+private async Task NotifySubscriptionChanged()
+{
+    await OnSubscriptionChanged.InvokeAsync(subscription);
+}
+```
+
+### MAUI Best Practices
+- Use platform-specific folder structure for custom implementations
+- Implement proper navigation using Shell or traditional navigation
+- Handle app lifecycle events appropriately
+- Use secure storage for sensitive data
+
+```csharp
+// Secure storage example
+await SecureStorage.SetAsync("api_token", token);
+var token = await SecureStorage.GetAsync("api_token");
 ```
 
 ### Code Quality
-- Follow DRY principle and single responsibility
-- Use consistent naming: camelCase for variables, PascalCase for classes
-- Add JSDoc for public APIs
-- Handle errors with user-friendly messages
+- Use dependency injection for services
+- Implement proper logging with ILogger
+- Handle exceptions gracefully with user-friendly messages
+- Use CancellationToken for long-running operations
 
 ### Security & Performance
-- Validate inputs on client and server
-- Use Angular's built-in sanitization
-- Clean up subscriptions and event listeners
-- Never expose sensitive data in client code
+- Validate inputs on both client and server
+- Use HTTPS for all API communications
+- Implement proper error boundaries
+- Cache data appropriately to reduce API calls
 
 ## Development Workflow
 
-### Building the App
+### Building the Apps
 ```bash
-npm install
-ng build
+# Build MAUI app for all platforms
+dotnet build -f net9.0-android
+dotnet build -f net9.0-ios
+dotnet build -f net9.0-windows
+dotnet build -f net9.0-maccatalyst
+
+# Build Blazor Web app
+dotnet build --project ExpenseTracker.Web
+
+# Run in development
+dotnet run --project ExpenseTracker.Maui
+dotnet run --project ExpenseTracker.Web
 ```
 
 ### Key Files to Reference
-- `src/app/models/expense.model.ts` - Data interfaces
-- `src/app/services/expense.service.ts` - API service patterns
-- `src/app/components/subscriptions/subscriptions.component.ts` - CRUD example
-- `src/app/components/dashboard/dashboard.component.ts` - Data loading patterns
+- `Models/Expense.cs` - Data models and interfaces
+- `Services/ExpenseService.cs` - API service implementation
+- `Components/SubscriptionsList.razor` - CRUD example component
+- `Components/Dashboard.razor` - Data loading and chart patterns
 
 ## Specific Conventions
 
 ### UI Components
-- Bootstrap 5 classes for styling
-- Lucide icons: `import { Plus, Edit, Trash2 } from 'lucide-angular'`
-- ngx-toastr for notifications
+- Bootstrap 5 classes for styling across all platforms
+- Lucide icons: Reference via CDN or npm package
+- Toast notifications using built-in Blazor patterns
 - Consistent loading/error state handling
 
 ### Data Management
-- All API calls through ExpenseService
-- RxJS observables for async operations
-- Proper error boundaries with fallback data
-- Update local state after successful operations
+- All API calls through ExpenseService with HttpClient
+- Use async/await for all data operations
+- Proper error boundaries with fallback UI
+- Update component state after successful operations
 
-### Forms
-- Template-driven forms with ngModel
-- Validate required fields before submission
-- Reset forms after operations
-- Support create and edit modes
+### Forms and Validation
+- Use EditForm with DataAnnotations validation
+- Implement proper two-way data binding
+- Reset forms after successful operations
+- Support both create and edit scenarios
+
+```razor
+<EditForm Model="subscription" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText @bind-Value="subscription.Name" class="form-control" />
+        <ValidationMessage For="() => subscription.Name" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</EditForm>
+```
 
 ### Navigation
-- Angular Router with standalone setup
-- Routes in `app.routes.ts`
-- Default redirect to `/dashboard`
+- Use MAUI Shell navigation for mobile/desktop apps
+- Use Blazor Router for web navigation
+- Implement proper deep linking support
+- Handle back button behavior appropriately
 
 ## Common Patterns
 
 ### Loading and Error States
-```typescript
-loading = true;
-error: string | null = null;
-
-this.service.getData().subscribe({
-  next: (data) => this.loading = false,
-  error: (err) => {
-    this.error = 'Failed to load data';
-    this.loading = false;
-  }
-});
+```razor
+@if (loading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger" role="alert">
+        @error
+    </div>
+}
+else
+{
+    <!-- Content -->
+}
 ```
 
 ### CRUD Operations
-```typescript
-addItem(item: Item): void {
-  this.service.addItem(item).subscribe({
-    next: () => this.loadItems(),
-    error: (err) => this.error = 'Failed to add item'
-  });
+```csharp
+private async Task SaveSubscriptionAsync()
+{
+    try
+    {
+        loading = true;
+
+        if (isNewSubscription)
+        {
+            await ExpenseService.CreateSubscriptionAsync(subscription);
+        }
+        else
+        {
+            await ExpenseService.UpdateSubscriptionAsync(subscription);
+        }
+
+        await LoadSubscriptions();
+        NavigateToList();
+    }
+    catch (Exception ex)
+    {
+        error = $"Failed to save subscription: {ex.Message}";
+    }
+    finally
+    {
+        loading = false;
+    }
 }
 
-deleteItem(id: string): void {
-  if (confirm('Are you sure?')) {
-    this.service.deleteItem(id).subscribe({
-      next: () => this.loadItems(),
-      error: (err) => this.error = 'Failed to delete item'
-    });
-  }
+private async Task DeleteSubscriptionAsync(string id)
+{
+    if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this subscription?"))
+    {
+        try
+        {
+            await ExpenseService.DeleteSubscriptionAsync(id);
+            await LoadSubscriptions();
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to delete subscription: {ex.Message}";
+        }
+    }
 }
 ```
 
 ## Dependencies
-- **Angular 20+** with standalone components
-- **Bootstrap 5** for styling and responsive design
-- **Lucide Angular** for consistent iconography
-- **Chart.js** and **ng2-charts** for data visualization
-- **ngx-toastr** for user notifications
-- **date-fns** for date manipulation utilities
-- **RxJS** for reactive programming and async operations
-- **Angular Animations** for UI transitions
+- **.NET 9.0** - Base framework
+- **.NET MAUI** - Cross-platform native app development
+- **Blazor** - Interactive web UI components
+- **Bootstrap 5** - CSS framework for responsive design
+- **Lucide Icons** - Modern icon library
+- **Chart.js** - Data visualization (via JS interop)
+- **System.Text.Json** - JSON serialization
+- **Microsoft.Extensions.Http** - HttpClient dependency injection
+- **Microsoft.Extensions.Logging** - Logging infrastructure
 
 ## Backend Integration
 - REST API at `http://localhost:8083/api`
 - Endpoints: `/subscriptions`, `/invoices`, `/summary/monthly`, `/summary/yearly`
-- File upload support for invoice attachments
+- JSON serialization with camelCase naming policy
+- Proper HTTP status code handling
+- File upload support for invoice attachments through multipart/form-data
+
+## Platform-Specific Considerations
+
+### Android
+- Network security configuration for localhost development
+- File provider for sharing attachments
+- Permission handling for storage access
+
+### iOS
+- Info.plist configuration for HTTP connections
+- File sharing capabilities
+- Keychain integration for secure storage
+
+### Windows
+- Package.appxmanifest configuration
+- File associations for invoice files
+- Windows Hello integration possibilities
+
+### Web
+- Progressive Web App (PWA) capabilities
+- Browser storage limitations
+- CORS configuration for API calls

@@ -1,0 +1,101 @@
+@using ExpenseTracker.Shared.Models
+
+<EditForm Model="@Subscription" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="name" class="form-label">Name *</label>
+                <InputText id="name" class="form-control" @bind-Value="Subscription.Name" placeholder="e.g., Netflix, Spotify" />
+                <ValidationMessage For="@(() => Subscription.Name)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="amount" class="form-label">Amount *</label>
+                <InputNumber id="amount" class="form-control" @bind-Value="Subscription.Amount" placeholder="0.00" />
+                <ValidationMessage For="@(() => Subscription.Amount)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <InputSelect id="category" class="form-select" @bind-Value="Subscription.Category">
+                    <option value="">Select Category</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Productivity">Productivity</option>
+                    <option value="Health">Health</option>
+                    <option value="Education">Education</option>
+                    <option value="Other">Other</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Subscription.Category)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="billingCycle" class="form-label">Billing Cycle *</label>
+                <InputSelect id="billingCycle" class="form-select" @bind-Value="Subscription.BillingCycle">
+                    <option value="@BillingCycle.Monthly">Monthly</option>
+                    <option value="@BillingCycle.Quarterly">Quarterly</option>
+                    <option value="@BillingCycle.Yearly">Yearly</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Subscription.BillingCycle)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="startDate" class="form-label">Start Date *</label>
+                <InputDate id="startDate" class="form-control" @bind-Value="Subscription.StartDate" />
+                <ValidationMessage For="@(() => Subscription.StartDate)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="nextBillingDate" class="form-label">Next Billing Date *</label>
+                <InputDate id="nextBillingDate" class="form-control" @bind-Value="Subscription.NextBillingDate" />
+                <ValidationMessage For="@(() => Subscription.NextBillingDate)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <InputTextArea id="description" class="form-control" rows="3" @bind-Value="Subscription.Description"
+                       placeholder="Optional description or notes about this subscription" />
+        <ValidationMessage For="@(() => Subscription.Description)" />
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="save" class="me-2"></i>
+            Save Subscription
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="HandleCancel">
+            <i data-lucide="x" class="me-2"></i>
+            Cancel
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public Subscription Subscription { get; set; } = new();
+    [Parameter] public EventCallback<Subscription> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleValidSubmit()
+    {
+        await OnSave.InvokeAsync(Subscription);
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

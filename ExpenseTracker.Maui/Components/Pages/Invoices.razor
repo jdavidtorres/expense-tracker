@@ -1,0 +1,47 @@
+@page "/invoices"
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i data-lucide="file-text" class="me-2"></i>
+                    Invoices
+                </h2>
+                <button class="btn btn-primary">
+                    <i data-lucide="plus" class="me-1"></i>
+                    Add Invoice
+                </button>
+            </div>
+
+            <div class="alert alert-info">
+                <i data-lucide="info" class="me-2"></i>
+                Invoice management functionality will be implemented soon.
+            </div>
+
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i data-lucide="file-text" class="text-muted mb-3" style="width: 64px; height: 64px;"></i>
+                    <h5 class="text-muted">No invoices found</h5>
+                    <p class="text-muted">Start by adding your first invoice.</p>
+                    <button class="btn btn-primary">
+                        <i data-lucide="plus" class="me-1"></i>
+                        Add Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+    }
+}

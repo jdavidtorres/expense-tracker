@@ -1,0 +1,90 @@
+@page "/reports"
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i data-lucide="bar-chart-3" class="me-2"></i>
+                Reports
+            </h2>
+
+            <div class="alert alert-info">
+                <i data-lucide="info" class="me-2"></i>
+                Detailed reporting functionality will be implemented soon.
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i data-lucide="calendar" class="me-2"></i>
+                                Monthly Reports
+                            </h5>
+                        </div>
+                        <div class="card-body text-center py-5">
+                            <i data-lucide="calendar" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                            <p class="text-muted">Generate monthly expense reports</p>
+                            <button class="btn btn-outline-primary">
+                                <i data-lucide="download" class="me-1"></i>
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i data-lucide="calendar-days" class="me-2"></i>
+                                Yearly Reports
+                            </h5>
+                        </div>
+                        <div class="card-body text-center py-5">
+                            <i data-lucide="calendar-days" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                            <p class="text-muted">Generate yearly expense reports</p>
+                            <button class="btn btn-outline-primary">
+                                <i data-lucide="download" class="me-1"></i>
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i data-lucide="pie-chart" class="me-2"></i>
+                                Category Analysis
+                            </h5>
+                        </div>
+                        <div class="card-body text-center py-5">
+                            <i data-lucide="pie-chart" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                            <p class="text-muted">Analyze expenses by category with charts and graphs</p>
+                            <button class="btn btn-outline-primary">
+                                <i data-lucide="eye" class="me-1"></i>
+                                View Analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+    }
+}

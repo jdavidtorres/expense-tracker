@@ -1,0 +1,230 @@
+@page "/"
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Dashboard - Expense Tracker</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i data-lucide="home" class="me-2"></i>
+                Dashboard
+            </h2>
+
+            @if (loading)
+            {
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Loading expense data...
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger">
+                    <i data-lucide="alert-circle" class="me-2"></i>
+                    @error
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!loading)
+    {
+        <!-- Monthly Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i data-lucide="calendar" class="me-2"></i>
+                            @GetMonthName(currentMonth) @currentYear Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Total This Month</h6>
+                                        <h3 class="text-primary">@FormatCurrency(monthlySummary.Total)</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Monthly Average</h6>
+                                        <h3 class="text-info">@FormatCurrency(monthlySummary.MonthlyAverage)</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Year to Date</h6>
+                                        <h3 class="text-success">@FormatCurrency(monthlySummary.YearlyTotal)</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4 mb-3">Expenses by Category</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-end">% of Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var category in monthlySummary.ByCategory)
+                                    {
+                                        <tr>
+                                            <td>@category.Key</td>
+                                            <td class="text-end">@FormatCurrency(category.Value)</td>
+                                            <td class="text-end">
+                                                @(((category.Value / (monthlySummary.Total == 0 ? 1 : monthlySummary.Total)) * 100).ToString("F1"))%
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Summary -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i data-lucide="calendar-days" class="me-2"></i>
+                            @currentYear Yearly Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Total Expenses</h6>
+                                        <h2 class="text-success">@FormatCurrency(yearlySummary.Total)</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Monthly Average</h6>
+                                        <h2 class="text-info">@FormatCurrency(yearlySummary.MonthlyAverage)</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mt-4 mb-3">Yearly Expenses by Category</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-end">% of Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var category in yearlySummary.ByCategory)
+                                    {
+                                        <tr>
+                                            <td>@category.Key</td>
+                                            <td class="text-end">@FormatCurrency(category.Value)</td>
+                                            <td class="text-end">
+                                                @(((category.Value / (yearlySummary.Total == 0 ? 1 : yearlySummary.Total)) * 100).ToString("F1"))%
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime currentDate = DateTime.Now;
+    private int currentYear;
+    private int currentMonth;
+
+    private ExpensesSummary monthlySummary = new();
+    private ExpensesSummary yearlySummary = new();
+
+    private bool loading = true;
+    private string? error;
+
+    protected override void OnInitialized()
+    {
+        currentYear = currentDate.Year;
+        currentMonth = currentDate.Month;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true;
+            error = null;
+
+            monthlySummary = await ExpenseService.GetMonthlySummaryAsync(currentYear, currentMonth);
+            yearlySummary = await ExpenseService.GetYearlySummaryAsync(currentYear);
+        }
+        catch (Exception ex)
+        {
+            error = "Failed to load expense data";
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private string GetMonthName(int month)
+    {
+        var months = new[]
+        {
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        };
+        return months[month - 1];
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        return amount.ToString("C2");
+    }
+}

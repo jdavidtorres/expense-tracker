@@ -1,0 +1,66 @@
+@page "/invoices"
+@inject ExpenseService ExpenseService
+@rendermode InteractiveServer
+
+<Microsoft.AspNetCore.Components.Web.PageTitle>Invoices - Expense Tracker</Microsoft.AspNetCore.Components.Web.PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Invoices</h1>
+                <button class="btn btn-primary">
+                    <i data-lucide="plus" class="me-2"></i>
+                    Add Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-lucide="file-text" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+                    <h5 class="card-title">Invoice Management</h5>
+                    <p class="card-text text-muted">
+                        Upload and manage your one-time expenses and invoice documents.
+                        This feature is coming soon!
+                    </p>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i data-lucide="upload" class="me-2"></i>
+                                        Document Upload
+                                    </h6>
+                                    <p class="card-text small">Upload receipt images and PDF invoices</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i data-lucide="tag" class="me-2"></i>
+                                        Expense Categorization
+                                    </h6>
+                                    <p class="card-text small">Organize expenses by category and date</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Placeholder for future invoice loading logic
+        await Task.CompletedTask;
+    }
+}

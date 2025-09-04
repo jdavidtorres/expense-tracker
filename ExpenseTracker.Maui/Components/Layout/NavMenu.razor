@@ -1,0 +1,68 @@
+@inject NavigationManager Navigation
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i data-lucide="receipt" class="me-2"></i>
+            Expense Tracker
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                        <i data-lucide="home" class="me-1"></i>
+                        Dashboard
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/subscriptions">
+                        <i data-lucide="refresh-cw" class="me-1"></i>
+                        Subscriptions
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/invoices">
+                        <i data-lucide="file-text" class="me-1"></i>
+                        Invoices
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/reports">
+                        <i data-lucide="bar-chart-3" class="me-1"></i>
+                        Reports
+                    </NavLink>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeIcons();
+        }
+    }
+
+    private async Task InitializeIcons()
+    {
+        try
+        {
+            await Task.Delay(100); // Give time for DOM to update
+            await JSRuntime.InvokeVoidAsync("expenseTracker.initializeIcons");
+        }
+        catch (Exception)
+        {
+            // Ignore JS interop errors during initialization
+        }
+    }
+}
+
+@inject IJSRuntime JSRuntime
