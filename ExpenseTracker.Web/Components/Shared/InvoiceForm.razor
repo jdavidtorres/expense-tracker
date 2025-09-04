@@ -1,0 +1,119 @@
+@using ExpenseTracker.Shared.Models
+
+<EditForm Model="@Invoice" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="invoiceNumber" class="form-label">Invoice Number *</label>
+                <InputText id="invoiceNumber" class="form-control" @bind-Value="Invoice.InvoiceNumber" placeholder="INV-001" />
+                <ValidationMessage For="@(() => Invoice.InvoiceNumber)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="name" class="form-label">Description *</label>
+                <InputText id="name" class="form-control" @bind-Value="Invoice.Name" placeholder="e.g., Office supplies, Client dinner" />
+                <ValidationMessage For="@(() => Invoice.Name)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="amount" class="form-label">Amount *</label>
+                <InputNumber id="amount" class="form-control" @bind-Value="Invoice.Amount" placeholder="0.00" />
+                <ValidationMessage For="@(() => Invoice.Amount)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <InputSelect id="category" class="form-select" @bind-Value="Invoice.Category">
+                    <option value="">Select Category</option>
+                    <option value="Office Supplies">Office Supplies</option>
+                    <option value="Travel">Travel</option>
+                    <option value="Meals">Meals</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Services">Services</option>
+                    <option value="Other">Other</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Invoice.Category)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="paymentDate" class="form-label">Payment Date *</label>
+                <InputDate id="paymentDate" class="form-control" @bind-Value="Invoice.PaymentDate" />
+                <ValidationMessage For="@(() => Invoice.PaymentDate)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="dueDate" class="form-label">Due Date</label>
+                <InputDate id="dueDate" class="form-control" @bind-Value="Invoice.DueDate" />
+                <ValidationMessage For="@(() => Invoice.DueDate)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="paymentStatus" class="form-label">Payment Status *</label>
+                <InputSelect id="paymentStatus" class="form-select" @bind-Value="Invoice.PaymentStatus">
+                    <option value="@PaymentStatus.Pending">Pending</option>
+                    <option value="@PaymentStatus.Paid">Paid</option>
+                    <option value="@PaymentStatus.Overdue">Overdue</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Invoice.PaymentStatus)" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="attachmentUrl" class="form-label">Attachment URL</label>
+                <InputText id="attachmentUrl" class="form-control" @bind-Value="Invoice.AttachmentUrl" placeholder="https://example.com/receipt.pdf" />
+                <ValidationMessage For="@(() => Invoice.AttachmentUrl)" />
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="notes" class="form-label">Notes</label>
+        <InputTextArea id="notes" class="form-control" rows="3" @bind-Value="Invoice.Notes"
+                       placeholder="Additional notes or details about this expense" />
+        <ValidationMessage For="@(() => Invoice.Notes)" />
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="save" class="me-2"></i>
+            Save Invoice
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="HandleCancel">
+            <i data-lucide="x" class="me-2"></i>
+            Cancel
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public Invoice Invoice { get; set; } = new();
+    [Parameter] public EventCallback<Invoice> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleValidSubmit()
+    {
+        await OnSave.InvokeAsync(Invoice);
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

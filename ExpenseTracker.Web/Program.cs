@@ -6,14 +6,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Configure HttpClient for API access
+// Configure HttpClient for API access with better error handling
 builder.Services.AddHttpClient<ExpenseService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:8083/");
+    client.BaseAddress = new Uri("http://localhost:8083/api/");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 // Register custom services
 builder.Services.AddScoped<ExpenseService>();
+
+// Add logging
+builder.Logging.AddConsole();
 
 var app = builder.Build();
 
